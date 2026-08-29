@@ -52,8 +52,15 @@ def get_flow():
             "redirect_uris": [st.secrets["google"]["redirect_uri"]],
         }
     }
+    # PKCE is skipped: the code_verifier it relies on lives in
+    # st.session_state, which does not survive the full-page redirect to
+    # Google and back. This is a confidential client (has client_secret),
+    # so PKCE isn't required for the token exchange to be secure.
     return Flow.from_client_config(
-        client_config, scopes=SCOPES, redirect_uri=st.secrets["google"]["redirect_uri"]
+        client_config,
+        scopes=SCOPES,
+        redirect_uri=st.secrets["google"]["redirect_uri"],
+        autogenerate_code_verifier=False,
     )
 
 
