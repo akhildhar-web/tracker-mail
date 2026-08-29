@@ -1,0 +1,6 @@
+.streamlit/secrets.toml
+credentials.json
+token.json
+dumy_tracker.xlsx
+__pycache__/
+*.pyc
