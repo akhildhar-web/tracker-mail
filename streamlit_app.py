@@ -19,6 +19,7 @@ Required secrets (set in Streamlit Cloud's "Secrets" panel, or locally in
 import datetime as dt
 import io
 import re
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -29,6 +30,12 @@ from googleapiclient.discovery import build
 from openpyxl import Workbook
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+# Streamlit Cloud runs its servers in UTC, but the date/time inputs in this
+# app are wall-clock times entered by IST users. Gmail's internalDate is a
+# UTC timestamp, so both sides must be anchored to the same zone or the
+# window comparison silently misses everything (see get_sent_emails_in_range).
+LOCAL_TZ = ZoneInfo("Asia/Kolkata")
 
 HEADERS = [
     "Date",
@@ -140,8 +147,11 @@ def parse_recipient_name(to_header):
 
 
 def get_sent_emails_in_range(service, start_dt, end_dt):
-    query_after = start_dt.date().strftime("%Y/%m/%d")
-    query_before = (end_dt.date() + dt.timedelta(days=1)).strftime("%Y/%m/%d")
+    # Widen by a day on each side since Gmail's after:/before: date operators
+    # aren't guaranteed to use LOCAL_TZ boundaries; the precise window is
+    # enforced below with tz-aware comparison.
+    query_after = (start_dt.date() - dt.timedelta(days=1)).strftime("%Y/%m/%d")
+    query_before = (end_dt.date() + dt.timedelta(days=2)).strftime("%Y/%m/%d")
     query = f"in:sent after:{query_after} before:{query_before}"
 
     emails = []
@@ -155,7 +165,9 @@ def get_sent_emails_in_range(service, start_dt, end_dt):
                 format="metadata",
                 metadataHeaders=["Subject", "To", "Date"],
             ).execute()
-            sent_dt = dt.datetime.fromtimestamp(int(msg["internalDate"]) / 1000)
+            sent_dt = dt.datetime.fromtimestamp(
+                int(msg["internalDate"]) / 1000, tz=dt.timezone.utc
+            ).astimezone(LOCAL_TZ)
             if not (start_dt <= sent_dt <= end_dt):
                 continue
             headers = msg["payload"].get("headers", [])
@@ -206,8 +218,8 @@ def main():
     employee_name = st.text_input("Employee name", value=default_name)
 
     if st.button("Fetch sent emails", type="primary"):
-        start_dt = dt.datetime.combine(start_date, start_time)
-        end_dt = dt.datetime.combine(end_date, end_time)
+        start_dt = dt.datetime.combine(start_date, start_time, tzinfo=LOCAL_TZ)
+        end_dt = dt.datetime.combine(end_date, end_time, tzinfo=LOCAL_TZ)
         if end_dt <= start_dt:
             st.error("End must be after start.")
             st.stop()
