@@ -235,7 +235,7 @@ def main():
         rows = []
         for email in emails:
             end_time_dt = email["time"]
-            start_time_dt = end_time_dt - dt.timedelta(minutes=random.randint(5, 15))
+            start_time_dt = end_time_dt - dt.timedelta(minutes=random.randint(3, 12))
             date_str = end_time_dt.strftime("%m/%d/%Y")
             start_str = start_time_dt.strftime("%m/%d/%Y %H:%M:%S")
             end_str = end_time_dt.strftime("%m/%d/%Y %H:%M:%S")
