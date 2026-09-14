@@ -18,6 +18,7 @@ Required secrets (set in Streamlit Cloud's "Secrets" panel, or locally in
 
 import datetime as dt
 import io
+import random
 import re
 from zoneinfo import ZoneInfo
 
@@ -233,9 +234,12 @@ def main():
 
         rows = []
         for email in emails:
-            time_str = email["time"].strftime("%m/%d/%Y %H:%M:%S")
-            date_str = email["time"].strftime("%m/%d/%Y")
-            rows.append([date_str, employee_name, "Email Ticket", email["description"], time_str, time_str])
+            end_time_dt = email["time"]
+            start_time_dt = end_time_dt - dt.timedelta(minutes=random.randint(5, 15))
+            date_str = end_time_dt.strftime("%m/%d/%Y")
+            start_str = start_time_dt.strftime("%m/%d/%Y %H:%M:%S")
+            end_str = end_time_dt.strftime("%m/%d/%Y %H:%M:%S")
+            rows.append([date_str, employee_name, "Email Ticket", email["description"], start_str, end_str])
 
         st.success(f"Found {len(rows)} sent emails.")
         st.dataframe(pd.DataFrame(rows, columns=HEADERS), use_container_width=True)
